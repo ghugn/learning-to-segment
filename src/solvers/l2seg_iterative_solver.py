@@ -56,7 +56,7 @@ class L2SegIterativeSolver:
         )
 
     def detect_unstable_edges(
-        self, instance: CVRPInstance, routes: List[List[int]]
+        self, instance: CVRPInstance, routes: List[List[int]], threshold: float = 0.6
     ) -> List[Tuple[int, int]]:
         """Run L2Seg neural model or heuristic fallback to predict unstable edges."""
         if self.model is None:
@@ -77,7 +77,7 @@ class L2SegIterativeSolver:
                 continue
             pred_edges = self.model.predict_subproblem_syn(
                 subproblem=sub,
-                threshold=0.6,
+                threshold=threshold,
                 n_clusters=3,
             )
             for u_orig, v_orig in pred_edges:
@@ -90,7 +90,7 @@ class L2SegIterativeSolver:
         instance: CVRPInstance,
         initial_routes: Optional[List[List[int]]] = None,
         time_limit: float = 30.0,
-        max_iterations: int = 15,
+        max_iterations: Optional[int] = None,
         reopt_time_per_iter: float = 3.0,
     ) -> Dict[str, Any]:
         """
@@ -120,13 +120,18 @@ class L2SegIterativeSolver:
 
         iteration = 0
         compressions = []
+        stagnation = 0
+        max_iter = max_iterations if max_iterations is not None else 1000000
 
-        while (time.perf_counter() - start_time) < time_limit and iteration < max_iterations:
+        while (time.perf_counter() - start_time) < time_limit and iteration < max_iter:
             iteration += 1
             iter_start = time.perf_counter()
 
+            # Dynamic threshold adaptation: diversify neighborhood when stagnating
+            curr_threshold = max(0.35, 0.60 - 0.05 * min(5, stagnation))
+
             # 1. Unstable Edges Detection via L2Seg
-            unstable_edges = self.detect_unstable_edges(instance, current_routes)
+            unstable_edges = self.detect_unstable_edges(instance, current_routes, threshold=curr_threshold)
 
             # 2. Segment Partitioning
             partitioned = partition_solution(instance, current_routes, unstable_edges)
@@ -162,9 +167,18 @@ class L2SegIterativeSolver:
             if rec_cost < current_cost - 1e-6:
                 current_routes = recovered_routes
                 current_cost = rec_cost
+                stagnation = 0
                 if current_cost < best_cost:
                     best_routes = [r[:] for r in current_routes]
                     best_cost = current_cost
+                    elapsed_now = time.perf_counter() - start_time
+                    print(f"      -> [L2Seg-Iter {iteration:03d} | t={elapsed_now:6.1f}s] New Best: {best_cost:.3f} (Compressed: {comp_pct:.1f}%)")
+            else:
+                stagnation += 1
+
+            if iteration % 15 == 0:
+                elapsed_now = time.perf_counter() - start_time
+                print(f"      .. [L2Seg-Iter {iteration:03d} | t={elapsed_now:6.1f}s] Current Best: {best_cost:.3f}")
 
             # If iteration took too long, check loop exit
             if (time.perf_counter() - start_time) >= time_limit:

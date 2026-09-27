@@ -67,55 +67,56 @@ class PyVRPSolver:
             cost = float(res.cost())
             return routes, cost, t_solve
 
-        # 2. Programmatic Model formulation
-        m = Model()
+        # 2. Fast ProblemData formulation (instant C++ matrix pass-through)
+        coords = instance.coords
+        demands = instance.demands
         num_clients = instance.num_customers
         capacity = int(round(instance.capacity))
 
-        # Add vehicle type with sufficient vehicles
-        m.add_vehicle_type(num_available=max(num_clients, 50), capacity=capacity)
+        locs = [
+            pyvrp.Location(
+                x=int(round(coords[i, 0] * self.scale_factor)),
+                y=int(round(coords[i, 1] * self.scale_factor)),
+            )
+            for i in range(len(coords))
+        ]
+        depots = [pyvrp.Depot(location=0)]
+        clients = [
+            pyvrp.Client(location=i, delivery=[max(1, int(round(demands[i])))])
+            for i in range(1, len(coords))
+        ]
+        vehicle_types = [
+            pyvrp.VehicleType(
+                num_available=max(num_clients, 50),
+                capacity=[capacity],
+            )
+        ]
 
-        # Locations and nodes
-        coords = instance.coords
-        demands = instance.demands
-        
-        # Scale coordinates for integer precision in PyVRP
-        locs = []
-        for i in range(len(coords)):
-            x_int = int(round(coords[i, 0] * self.scale_factor))
-            y_int = int(round(coords[i, 1] * self.scale_factor))
-            loc = m.add_location(x=x_int, y=y_int)
-            locs.append(loc)
+        dist_mat_scaled = (instance.dist_matrix * self.scale_factor).round().astype(int)
+        # Ensure 0 diagonal
+        np.fill_diagonal(dist_mat_scaled, 0)
 
-        depot = m.add_depot(location=locs[0])
-
-        clients = []
-        for i in range(1, len(coords)):
-            d_int = max(1, int(round(demands[i])))
-            client = m.add_client(location=locs[i], delivery=d_int)
-            clients.append(client)
-
-        # Distance matrix with 0 on self-loops
-        dist_mat = instance.dist_matrix
-        for i in range(len(coords)):
-            for j in range(len(coords)):
-                d_val = 0 if i == j else max(1, int(round(dist_mat[i, j] * self.scale_factor)))
-                m.add_edge(locs[i], locs[j], distance=d_val, duration=d_val)
+        data = pyvrp.ProblemData(
+            locations=locs,
+            clients=clients,
+            depots=depots,
+            vehicle_types=vehicle_types,
+            distance_matrices=[dist_mat_scaled],
+            duration_matrices=[dist_mat_scaled],
+        )
 
         stop_crit = MaxRuntime(time_limit) if max_iterations is None else MaxIterations(max_iterations)
-        res = m.solve(stop=stop_crit, display=False)
+        res = pyvrp.solve(data, stop=stop_crit, display=False)
         t_solve = time.perf_counter() - t0
 
         routes = []
         for r in res.best.routes():
-            # In programmatic model, location index is client.idx + 1
             client_nodes = [act.idx + 1 for act in r if act.is_client()]
             if client_nodes:
                 routes.append([0] + client_nodes + [0])
 
-        # Compute exact unscaled floating cost on original instance
         real_cost = sum(
-            sum(dist_mat[r[k], r[k + 1]] for k in range(len(r) - 1))
+            sum(instance.dist_matrix[r[k], r[k + 1]] for k in range(len(r) - 1))
             for r in routes
         )
 

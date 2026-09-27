@@ -72,11 +72,43 @@ def run_nds_scale(nds_dir: str, scale: int, time_limit: int) -> Dict[str, Any]:
     return {"cost": None, "time": None, "status": "Error/Timeout"}
 
 
+def save_markdown_and_json(all_scale_results: List[Dict[str, Any]], out_md: str, out_json: str, budgets: Dict[int, float]):
+    with open(out_json, "w", encoding="utf-8") as f:
+        json.dump({"results": all_scale_results, "budgets": budgets}, f, indent=2)
+
+    with open(out_md, "w", encoding="utf-8") as f:
+        f.write("# Multi-Scale Empirical SOTA Benchmark: CVRP 1k, 2k, 3k (Paper Original Time)\n\n")
+        f.write(f"- **Scale Budgets (Paper Original Time)**: 1k = {budgets[1000]:.1f}s (2.5m), 2k = {budgets[2000]:.1f}s (4.0m), 3k = {budgets[3000]:.1f}s (4.0m)\n")
+        f.write(f"- **Datasets**: `vrp1000_test_seed1234.pkl`, `vrp2000_test_seed1234.pkl`, Synthetic CVRP3k\n\n")
+        f.write("| Scale | Method | Solution Cost (Obj) | Gap vs HGS (%) | Execution Time | Search Space Reduction |\n")
+        f.write("| :---: | :--- | :---: | :---: | :---: | :---: |\n")
+        for item in all_scale_results:
+            s = f"**CVRP-{item['scale']}**"
+            f.write(f"| {s} | **PyVRP (HGS Vidal 2022)** | {item['pyvrp_cost']:.3f} | 0.00% | {item['pyvrp_time']:.2f}s | 0.0% (Full Graph) |\n")
+            nds_c_str = f"{item['nds_cost']:.3f}" if item['nds_cost'] is not None else "-"
+            nds_t_str = f"{item['nds_time']:.2f}s" if item['nds_time'] is not None else "-"
+            nds_red = "0.0% (Full Graph)" if item['nds_cost'] is not None else "OOM / Unsupported Scale"
+            f.write(f"| | **NDS (Hottung et al. 2022)** | {nds_c_str} | {item['nds_gap']} | {nds_t_str} | {nds_red} |\n")
+            f.write(f"| | **L2Seg-SYN-LNS (Our FSTA)** | **{item['l2seg_cost']:.3f}** | **{item['l2seg_gap']}** | **{item['l2seg_time']:.2f}s** | **-{item['l2seg_comp']:.1f}%** |\n")
+
+
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+
     parser = argparse.ArgumentParser(description="Multi-Scale Benchmark: 1k, 2k, 3k (L2Seg vs PyVRP vs NDS)")
-    parser.add_argument("--time_limit", type=float, default=25.0, help="Per-method time limit in seconds")
+    parser.add_argument("--time_limit", type=float, default=None, help="Uniform time limit across all scales")
+    parser.add_argument("--time_1k", type=float, default=150.0, help="Time limit for CVRP 1k (default: 150s / 2.5m)")
+    parser.add_argument("--time_2k", type=float, default=240.0, help="Time limit for CVRP 2k (default: 240s / 4.0m)")
+    parser.add_argument("--time_3k", type=float, default=240.0, help="Time limit for CVRP 3k (default: 240s / 4.0m)")
     parser.add_argument("--nds_dir", type=str, default="../NDS", help="Path to NDS cloned repository")
     args = parser.parse_args()
+
+    budgets = {
+        1000: args.time_limit if args.time_limit is not None else args.time_1k,
+        2000: args.time_limit if args.time_limit is not None else args.time_2k,
+        3000: args.time_limit if args.time_limit is not None else args.time_3k,
+    }
 
     nds_dir = os.path.abspath(os.path.join(project_root, args.nds_dir))
     pyvrp_solver = PyVRPSolver()
@@ -90,15 +122,19 @@ def main():
 
     scales = [1000, 2000, 3000]
     all_scale_results = []
+    out_md = os.path.join(project_root, "benchmarks", "multiscale_benchmark_results.md")
+    out_json = os.path.join(project_root, "benchmarks", "multiscale_benchmark_results.json")
 
     print("=" * 105)
-    print("      MULTI-SCALE SOTA BENCHMARK ON CVRP: 1k, 2k, 3k (SCALABILITY PROOF)")
-    print(f"      Time Budget per Method: {args.time_limit:.1f}s | Architecture: Zen 4 (8C/16T)")
+    print("      MULTI-SCALE SOTA BENCHMARK ON CVRP: 1k, 2k, 3k (PAPER ORIGINAL TIME)")
+    print(f"      Budgets: 1k={budgets[1000]:.1f}s (2.5m) | 2k={budgets[2000]:.1f}s (4.0m) | 3k={budgets[3000]:.1f}s (4.0m)")
+    print("      Architecture: AMD Ryzen 7 8745HS (8 Cores / 16 Threads, Zen 4)")
     print("=" * 105)
 
     for scale in scales:
-        print(f"\n>>> BENCHMARKING SCALE N = {scale} CUSTOMERS <<<")
-        
+        time_budget = budgets[scale]
+        print(f"\n{'='*40} SCALE N = {scale} CUSTOMERS (Budget: {time_budget:.1f}s) {'='*40}")
+
         # Load or generate instance
         if scale == 1000:
             pkl_path = os.path.join(nds_dir, "data", "cvrp", "vrp1000_test_seed1234.pkl")
@@ -110,14 +146,13 @@ def main():
             instance = generate_synthetic_instance(3000, capacity=300.0, seed=42)
 
         # 1. PyVRP (HGS Vidal 2022)
-        print(f"  [1/3] Running PyVRP (HGS Vidal 2022)...", end="", flush=True)
-        t0 = time.perf_counter()
-        py_routes, py_cost, py_time = pyvrp_solver.solve(instance, time_limit=args.time_limit)
+        print(f"  [1/3] Running PyVRP (HGS Vidal 2022, budget: {time_budget:.1f}s)...", end="", flush=True)
+        py_routes, py_cost, py_time = pyvrp_solver.solve(instance, time_limit=time_budget)
         print(f" Done ({py_time:.2f}s, Cost: {py_cost:.3f})")
 
         # 2. NDS (Hottung et al. 2022)
-        print(f"  [2/3] Running NDS (Hottung et al. 2022)...", end="", flush=True)
-        nds_res = run_nds_scale(nds_dir, scale, int(args.time_limit))
+        print(f"  [2/3] Running NDS (Hottung et al. 2022, budget: {time_budget:.1f}s)...", end="", flush=True)
+        nds_res = run_nds_scale(nds_dir, scale, int(time_budget))
         nds_cost = nds_res.get("cost")
         nds_time = nds_res.get("time")
         nds_status = nds_res.get("status")
@@ -127,8 +162,8 @@ def main():
             print(f" {nds_status}")
 
         # 3. L2Seg-SYN-LNS (Our Proposed Framework)
-        print(f"  [3/3] Running L2Seg-SYN-LNS (FSTA Topological Compression)...", end="", flush=True)
-        l2_res = l2seg_solver.solve(instance, time_limit=args.time_limit, reopt_time_per_iter=3.0)
+        print(f"  [3/3] Running L2Seg-SYN-LNS (FSTA Topological Compression, budget: {time_budget:.1f}s)...", end="", flush=True)
+        l2_res = l2seg_solver.solve(instance, time_limit=time_budget, reopt_time_per_iter=3.0)
         l2_cost = l2_res["best_cost"]
         l2_time = l2_res["total_time"]
         l2_comp = l2_res["avg_compression_pct"]
@@ -152,6 +187,10 @@ def main():
             "l2seg_comp": l2_comp,
         })
 
+        # Save progress incrementally after each scale
+        save_markdown_and_json(all_scale_results, out_md, out_json, budgets)
+        print(f"  [+] Progress saved after scale N={scale} -> {out_md}")
+
     # Summary Table
     print("\n" + "=" * 105)
     print("      MULTI-SCALE SUMMARY COMPARISON TABLE: CVRP 1k, 2k, 3k")
@@ -161,36 +200,16 @@ def main():
 
     for item in all_scale_results:
         s = f"N={item['scale']}"
-        # PyVRP
         print(f"{s:<8} | {'PyVRP (HGS Vidal 2022)':<24} | {item['pyvrp_cost']:<12.3f} | {'0.00%':<12} | {item['pyvrp_time']:<10.2f} | {'0.0% (Full Graph)':<20}")
-        # NDS
         nds_c_str = f"{item['nds_cost']:.3f}" if item['nds_cost'] is not None else "N/A"
         nds_t_str = f"{item['nds_time']:.2f}" if item['nds_time'] is not None else "-"
         nds_reduct = "0.0% (Full Graph)" if item['nds_cost'] is not None else "OOM / No Model (-)"
         print(f"{'':<8} | {'NDS (Hottung et al. 2022)':<24} | {nds_c_str:<12} | {item['nds_gap']:<12} | {nds_t_str:<10} | {nds_reduct:<20}")
-        # L2Seg
         comp_str = f"-{item['l2seg_comp']:.1f}% (Compressed!)"
         print(f"{'':<8} | {'L2Seg-SYN-LNS (Our FSTA)':<24} | {item['l2seg_cost']:<12.3f} | {item['l2seg_gap']:<12} | {item['l2seg_time']:<10.2f} | {comp_str:<20}")
         print("-" * 105)
 
-    # Save to Markdown
-    out_md = os.path.join(project_root, "benchmarks", "multiscale_benchmark_results.md")
-    with open(out_md, "w", encoding="utf-8") as f:
-        f.write("# Multi-Scale Empirical SOTA Benchmark: CVRP 1k, 2k, 3k\n\n")
-        f.write(f"- **Time Budget per Method**: {args.time_limit:.1f}s\n")
-        f.write(f"- **Datasets**: `vrp1000_test_seed1234.pkl`, `vrp2000_test_seed1234.pkl`, Synthetic CVRP3k\n\n")
-        f.write("| Scale | Method | Solution Cost (Obj) | Gap vs HGS (%) | Execution Time | Search Space Reduction |\n")
-        f.write("| :---: | :--- | :---: | :---: | :---: | :---: |\n")
-        for item in all_scale_results:
-            s = f"**CVRP-{item['scale']}**"
-            f.write(f"| {s} | **PyVRP (HGS Vidal 2022)** | {item['pyvrp_cost']:.3f} | 0.00% | {item['pyvrp_time']:.2f}s | 0.0% (Full Graph) |\n")
-            nds_c_str = f"{item['nds_cost']:.3f}" if item['nds_cost'] is not None else "-"
-            nds_t_str = f"{item['nds_time']:.2f}s" if item['nds_time'] is not None else "-"
-            nds_red = "0.0% (Full Graph)" if item['nds_cost'] is not None else "OOM / Unsupported Scale"
-            f.write(f"| | **NDS (Hottung et al. 2022)** | {nds_c_str} | {item['nds_gap']} | {nds_t_str} | {nds_red} |\n")
-            f.write(f"| | **L2Seg-SYN-LNS (Our FSTA)** | **{item['l2seg_cost']:.3f}** | **{item['l2seg_gap']}** | **{item['l2seg_time']:.2f}s** | **-{item['l2seg_comp']:.1f}%** |\n")
-
-    print(f"\n[+] Multi-Scale Benchmark saved to: {out_md}")
+    print(f"\n[+] Multi-Scale Benchmark complete and saved to: {out_md}")
 
 
 if __name__ == "__main__":
