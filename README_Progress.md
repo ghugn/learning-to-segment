@@ -165,6 +165,17 @@ Trong suốt quá trình code và chạy thử nghiệm, chúng ta đã phát hi
 
 ---
 
+### Phát hiện 5: Tác động quyết định của Nghiệm khởi tạo chuẩn (Phụ lục D.1 - Polar Sweep + Intra-Route 2-Opt)
+* **Bản chất phát hiện:**
+  * Thuật toán Angular Sweep thô sơ ban đầu nối các điểm chỉ theo góc cực mà chưa tối ưu hóa thứ tự nội tuyến, dẫn đến đường đi zíc-zắc đan chéo với chi phí ban đầu lên tới `202.598`. Vì thế, trong 10-15 giây đầu, L2Seg mới chỉ kịp chạy 1 vòng lặp thô và dừng lại ở mức `167.215`.
+  * Kiểm tra lại Phụ lục D.1 (Appendix D.1) của bài báo ICLR 2026, các tác giả áp dụng bước xử lý hậu kỳ 2-opt nội tuyến (intra-route 2-opt) trên từng chặng quét góc.
+* **Thay đổi & Hiệu quả vượt bậc:**
+  * Bổ sung thuật toán `intra-route 2-opt` vào hàm `build_angular_sweep_solution` (chạy cực nhanh chỉ mất 41 mili-giây).
+  * Chi phí xuất phát chuẩn khoa học lập tức hạ từ `202.598` xuống thẳng **`42.580`**.
+  * Chạy đối đầu thực nghiệm 20 giây giữa PyVRP (39.886), NDS (40.320) và L2Seg (42.564) đã **thu hẹp độ chênh lệch Gap % từ +316% xuống chỉ còn +6.71%**, đồng thời **nén đồ thị tới 78.4%**.
+
+---
+
 ## 4. TỔNG HỢP CÁC KHO MÃ NGUỒN ĐÃ TÍCH HỢP
 
 | Thành phần | Đường dẫn | Xuất xứ / Tác giả | Vai trò trong dự án |
