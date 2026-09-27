@@ -57,6 +57,10 @@ class L2SegModel(nn.Module):
             dropout=dropout,
         )
 
+    @classmethod
+    def load_pretrained(cls, nar_path: str = "checkpoints/nar_model.pt", ar_path: str = "checkpoints/ar_model.pt", device: str = "cpu"):
+        return load_trained_l2seg_model(nar_path=nar_path, ar_path=ar_path, device=device)
+
     def forward_nar(
         self,
         node_feats: torch.Tensor,
