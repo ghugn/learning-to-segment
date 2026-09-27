@@ -6,6 +6,6 @@
 
 | Method | Implementation | Cost (Obj) | Gap vs HGS (%) | Execution Time | Graph Search Space Reduction |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **PyVRP (HGS Vidal 2022)** | Official C++ Engine | **39.886** | **0.00%** | 22.41s | 0.0% (Full Graph) |
-| **NDS (Hottung et al. 2022)** | Official C++ / PyTorch Repo | **40.320** | **+1.09%** | 24.65s | 0.0% (Full Graph) |
-| **L2Seg-SYN-LNS** | L2Seg AI + FSTA + Focused LNS | **42.564** | **+6.71%** | 23.53s | **-78.4%** |
+| **PyVRP (HGS Vidal 2022)** | Official C++ Engine | **39.886** | **0.00%** | 23.35s | 0.0% (Full Graph) |
+| **NDS (Hottung et al. 2022)** | Official C++ / PyTorch Repo | **40.150** | **+0.66%** | 24.30s | 0.0% (Full Graph) |
+| **L2Seg-SYN-LNS** | L2Seg AI + FSTA + Focused LNS | **42.480** | **+6.50%** | 20.04s | **-78.5%** |
