@@ -28,6 +28,10 @@ class CVRPInstance:
     def num_customers(self) -> int:
         return len(self.coords) - 1
 
+    @property
+    def num_nodes(self) -> int:
+        return len(self.coords)
+
     def get_distance(self, u: int, v: int) -> float:
         return float(self.dist_matrix[u, v])
 

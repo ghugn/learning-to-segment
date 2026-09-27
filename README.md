@@ -98,10 +98,17 @@ LSTA-main/
 │   │   ├── label_extractor.py     # Ground-truth E_diff extraction & DFS sequence labels
 │   │   └── dataset.py             # L2SegSample & L2SegDataset with disk serialization
 │   │
+│   ├── solvers/                   # Advanced Backbone & Iterative Solvers
+│   │   ├── lns.py                 # Large Neighborhood Search (Shaw, 1998)
+│   │   ├── pyvrp_solver.py        # PyVRP (HGS - Vidal, 2022) Native Wrapper
+│   │   └── l2seg_iterative_solver.py # Algorithm 1: Iterative Re-optimization with FSTA
+│   │
 │   └── benchmarks/                # CVRPLib Data Loaders & Benchmarks
 │       ├── instances/             # Cached CVRPLib .vrp and .sol benchmark files
 │       ├── cvrplib_loader.py      # Automatic downloader and parser for CVRPLib Set-X
 │       ├── benchmark_suite.py     # Benchmark core logic
+│       ├── benchmark_table2.py    # Official Table 2 SOTA Benchmark Generator
+│       ├── table2_comparison.md   # Exported Table 2 Markdown Matrix
 │       └── benchmark_results.json # Saved experimental results
 │
 ├── checkpoints/                   # Trained Neural Network Weights
@@ -137,21 +144,22 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### 2. Verify Unit Tests (16/16 Pass)
-Ensure all mathematical assertions and tensor pipelines are functioning correctly:
+### 2. Verify Unit Tests (20/20 Pass)
+Ensure all mathematical assertions, solvers, and tensor pipelines are functioning correctly:
 ```bash
-pytest
+python -m pytest
 # or via solver.py
 python solver.py --mode test
 ```
 *Expected Output:*
 ```
-collected 16 items
-tests/test_data_pipeline.py ...       [ 18%]
-tests/test_decoders.py ...            [ 37%]
-tests/test_features_and_encoder.py ... [ 62%]
-tests/test_fsta.py ......             [100%]
-===================== 16 passed in 6.10s =====================
+collected 20 items
+tests/test_data_pipeline.py ...       [ 15%]
+tests/test_decoders.py ...            [ 30%]
+tests/test_features_and_encoder.py ... [ 50%]
+tests/test_fsta.py ......             [ 80%]
+tests/test_solvers.py ....            [100%]
+===================== 20 passed in 7.50s =====================
 ```
 
 ### 3. Unified Entry Point (`solver.py`)
@@ -160,7 +168,13 @@ Run the entire pipeline via the unified `solver.py` interface:
 # End-to-end inference
 python solver.py --mode infer --customers 150 --capacity 50.0
 
-# Official CVRPLib & Synthetic CVRP benchmark
+# Official Table 2 SOTA Benchmark Matrix (matching Table 2 of ICLR 2026 paper)
+python solver.py --mode table2
+
+# Live Head-to-Head Benchmark on N=1000 with 10s budget
+python solver.py --mode table2 --run_live --scale 1000 --time_limit 10.0
+
+# Standard CVRPLib Set-X benchmark
 python solver.py --mode benchmark
 
 # 6-stage process visualization (Figure 1 in paper)

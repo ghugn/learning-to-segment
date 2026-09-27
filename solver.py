@@ -34,7 +34,7 @@ def main():
         "--mode",
         type=str,
         default="infer",
-        choices=["infer", "benchmark", "visualize", "test", "train-nar", "train-ar"],
+        choices=["infer", "benchmark", "table2", "visualize", "test", "train-nar", "train-ar"],
         help="Execution mode (default: infer)",
     )
     parser.add_argument("--customers", type=int, default=150, help="Number of customers for infer/visualize")
@@ -60,6 +60,12 @@ def main():
         print("\n[*] Launching Official Benchmark Suite...")
         sys.argv = [sys.argv[0]] + unknown
         benchmark_main()
+
+    elif args.mode == "table2":
+        from benchmarks.benchmark_table2 import main as table2_main
+        print("\n[*] Launching Official Table 2 SOTA Benchmark Suite...")
+        sys.argv = [sys.argv[0]] + unknown
+        table2_main()
 
     elif args.mode == "visualize":
         from run.visualize import plot_l2seg_fsta_process
