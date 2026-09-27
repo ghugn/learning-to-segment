@@ -46,8 +46,29 @@ def build_angular_sweep_solution(instance: CVRPInstance) -> List[List[int]]:
         curr_route.append(0)
         routes.append(curr_route)
 
-    is_valid, msg = validate_cvrp_solution(instance, routes)
+    # Standard intra-route 2-opt post-processing (Appendix D.1 of paper)
+    dist = instance.dist_matrix
+    optimized_routes: List[List[int]] = []
+    for r in routes:
+        best_r = r[:]
+        improved = True
+        while improved:
+            improved = False
+            for i in range(1, len(best_r) - 2):
+                for j in range(i + 1, len(best_r) - 1):
+                    delta = (
+                        dist[best_r[i - 1], best_r[j]]
+                        + dist[best_r[i], best_r[j + 1]]
+                        - dist[best_r[i - 1], best_r[i]]
+                        - dist[best_r[j], best_r[j + 1]]
+                    )
+                    if delta < -1e-6:
+                        best_r[i : j + 1] = best_r[i : j + 1][::-1]
+                        improved = True
+        optimized_routes.append(best_r)
+
+    is_valid, msg = validate_cvrp_solution(instance, optimized_routes)
     if not is_valid:
         raise RuntimeError(f"Generated initial solution is invalid: {msg}")
 
-    return routes
+    return optimized_routes
