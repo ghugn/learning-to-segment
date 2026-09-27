@@ -1,16 +1,10 @@
 # L2Seg & FSTA: Learning to Segment for Large-Scale Vehicle Routing Problems
 
-[![ICLR 2026](https://img.shields.io/badge/Paper-ICLR%202026-blue.svg)](https://openreview.net/forum?id=...)
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange.svg)](https://pytorch.org/)
-[![PyG](https://img.shields.io/badge/PyG-2.5%2B-red.svg)](https://pyg.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 An industrial-grade, fully modular Python implementation of **Learning to Segment (L2Seg)** and the **First-Segment-Then-Aggregate (FSTA)** decomposition paradigm for large-scale Capacitated Vehicle Routing Problems (CVRP), based on the **ICLR 2026** paper *"Learning to Segment for Vehicle Routing Problems"* (Ouyang et al.).
 
 This module serves as the **Level 2: Topological Coarse-Graining / Abstraction** component in the overarching research framework **Bridging Reducibility and Scalability: Toward Foundation Multi-task Combinatorial Optimization**.
 
-> 📖 **Comprehensive Project & Benchmark Log**: For the complete chronological development trajectory, AI training details, 9 core technical findings, and full empirical benchmark tables against PyVRP, NDS, and LKH-3, please refer to **[README_Progress.md](README_Progress.md)**.
+> **Project & Benchmark Log**: For the complete chronological development trajectory, AI training details, 9 core technical findings, and full empirical benchmark tables against PyVRP, NDS, and LKH-3, please refer to **[README_Progress.md](README_Progress.md)**.
 
 ---
 
@@ -221,9 +215,9 @@ Evaluated under identical paper time budgets (150s for 1k, 240s for 2k and 3k) a
 
 | Benchmark Scale | Metric | **L2Seg-SYN-PYVRP (Ours)** | **PyVRP (HGS)** | **NDS (Paper SOTA)** | **LKH-3.0.4** |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **CVRP-1000**<br>*(150s budget)* | **Cost**<br>Time<br>Status | **40.718** ⭐<br>**25.2s** *(6x faster)*<br>`Valid: True` | 41.200<br>150.0s<br>`Valid: True` | 41.160<br>150.0s<br>`Feasible` | 43.140<br>150.0s<br>`Feasible` |
-| **CVRP-2000**<br>*(240s budget)* | **Cost**<br>Time<br>Status | **55.862** ⭐<br>**32.0s** *(7.5x faster)*<br>`Valid: True` | 57.200<br>240.0s<br>`Valid: True` | 56.110<br>240.0s<br>`Feasible` | 59.810<br>240.0s<br>`Feasible` |
-| **CVRP-3000**<br>*(240s budget)* | **Cost**<br>Time<br>Status | **67.292** ⭐<br>**35.5s** *(6.7x faster)*<br>`Valid: True` | 67.210<br>240.0s<br>`Valid: True` | **OOM / Crash** ❌<br>N/A<br>CUDA OOM | 71.050<br>240.0s<br>`Feasible` |
+| **CVRP-1000**<br>*(150s budget)* | **Cost**<br>Time<br>Status | **40.718**<br>**25.2s** *(6.0x faster)*<br>`Valid: True` | 41.200<br>150.0s<br>`Valid: True` | 41.160<br>150.0s<br>`Feasible` | 43.140<br>150.0s<br>`Feasible` |
+| **CVRP-2000**<br>*(240s budget)* | **Cost**<br>Time<br>Status | **55.862**<br>**32.0s** *(7.5x faster)*<br>`Valid: True` | 57.200<br>240.0s<br>`Valid: True` | 56.110<br>240.0s<br>`Feasible` | 59.810<br>240.0s<br>`Feasible` |
+| **CVRP-3000**<br>*(240s budget)* | **Cost**<br>Time<br>Status | **67.292**<br>**35.5s** *(6.7x faster)*<br>`Valid: True` | 67.210<br>240.0s<br>`Valid: True` | OOM / Crash<br>N/A<br>CUDA OOM | 71.050<br>240.0s<br>`Feasible` |
 
 > **Key Empirical Insights**:
 > 1. **Superiority & Speedup**: On CVRP-1000 and CVRP-2000, `L2Seg-SYN-PYVRP` outperforms both standalone PyVRP and NDS in objective cost while converging **6x to 7.5x faster** (25s–32s vs 150s–240s).
