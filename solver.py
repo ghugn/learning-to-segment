@@ -34,13 +34,17 @@ def main():
         "--mode",
         type=str,
         default="infer",
-        choices=["infer", "benchmark", "table2", "visualize", "test", "train-nar", "train-ar"],
+        choices=["infer", "benchmark", "table2", "multiscale", "visualize", "test", "train-nar", "train-ar"],
         help="Execution mode (default: infer)",
     )
     parser.add_argument("--customers", type=int, default=150, help="Number of customers for infer/visualize")
     parser.add_argument("--capacity", type=float, default=50.0, help="Vehicle capacity")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--output", type=str, default="assets/l2seg_fsta_process.png", help="Path for visualization output")
+    parser.add_argument("--backbone", type=str, default="pyvrp", choices=["pyvrp", "lns"], help="Backbone solver for L2Seg")
+    parser.add_argument("--time_1k", type=int, default=150, help="Time limit for CVRP-1000")
+    parser.add_argument("--time_2k", type=int, default=240, help="Time limit for CVRP-2000")
+    parser.add_argument("--time_3k", type=int, default=240, help="Time limit for CVRP-3000")
 
     args, unknown = parser.parse_known_args()
 
@@ -66,6 +70,12 @@ def main():
         print("\n[*] Launching Official Table 2 SOTA Benchmark Suite...")
         sys.argv = [sys.argv[0]] + unknown
         table2_main()
+
+    elif args.mode == "multiscale":
+        from benchmarks.run_multiscale_benchmark import main as multiscale_main
+        print("\n[*] Launching Multi-Scale Benchmark Suite (1k, 2k, 3k across PyVRP, NDS, L2Seg)...")
+        sys.argv = [sys.argv[0], f"--backbone={args.backbone}", f"--time_1k={args.time_1k}", f"--time_2k={args.time_2k}", f"--time_3k={args.time_3k}"] + unknown
+        multiscale_main()
 
     elif args.mode == "visualize":
         from run.visualize import plot_l2seg_fsta_process
