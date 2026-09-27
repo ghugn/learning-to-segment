@@ -71,8 +71,10 @@ class LNSSolver:
             iteration += 1
 
             # Determine number of customers to remove: q in [q_min, q_max]
-            q_min = max(2, int(self.min_q_frac * n_clients))
-            q_max = max(q_min + 1, int(self.max_q_frac * n_clients))
+            # Standard Shaw (1998) & Ropke & Pisinger (2006) for large CVRP: cap at 10-25 nodes
+            n_target = len(allowed_removal_nodes) if allowed_removal_nodes is not None else n_clients
+            q_min = max(2, min(10, int(self.min_q_frac * n_target)))
+            q_max = max(q_min + 1, min(25, int(self.max_q_frac * n_target)))
             q = self.rng.randint(q_min, q_max + 1)
 
             # Choose destroy operator: 0 = Shaw, 1 = Worst, 2 = Random
@@ -220,6 +222,7 @@ class LNSSolver:
         dist = instance.dist_matrix
         demands = instance.demands
         capacity = instance.capacity
+        route_loads = [sum(demands[node] for node in r[1:-1]) for r in routes]
 
         self.rng.shuffle(removed_nodes)
 
@@ -231,8 +234,7 @@ class LNSSolver:
 
             # Try inserting into existing routes
             for r_idx, r in enumerate(routes):
-                cur_dem = sum(demands[node] for node in r[1:-1])
-                if cur_dem + d_u > capacity:
+                if route_loads[r_idx] + d_u > capacity:
                     continue
 
                 for pos in range(1, len(r)):
@@ -245,9 +247,11 @@ class LNSSolver:
 
             if best_r_idx != -1:
                 routes[best_r_idx].insert(best_pos, u)
+                route_loads[best_r_idx] += d_u
             else:
                 # Open a new single-customer route: [0, u, 0]
                 routes.append([0, u, 0])
+                route_loads.append(d_u)
 
         return routes
 
@@ -261,6 +265,7 @@ class LNSSolver:
         dist = instance.dist_matrix
         demands = instance.demands
         capacity = instance.capacity
+        route_loads = [sum(demands[node] for node in r[1:-1]) for r in routes]
 
         unassigned = set(removed_nodes)
 
@@ -276,8 +281,7 @@ class LNSSolver:
                 node_best_pos: Optional[Tuple[int, int]] = None
 
                 for r_idx, r in enumerate(routes):
-                    cur_dem = sum(demands[node] for node in r[1:-1])
-                    if cur_dem + d_u > capacity:
+                    if route_loads[r_idx] + d_u > capacity:
                         continue
 
                     for pos in range(1, len(r)):
@@ -311,9 +315,12 @@ class LNSSolver:
                 r_idx, pos = best_insert_pos
                 if r_idx < len(routes):
                     routes[r_idx].insert(pos, best_node)
+                    route_loads[r_idx] += demands[best_node]
                 else:
                     routes.append([0, best_node, 0])
+                    route_loads.append(demands[best_node])
             else:
                 routes.append([0, best_node, 0])
+                route_loads.append(demands[best_node])
 
         return routes
