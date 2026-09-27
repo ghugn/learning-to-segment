@@ -42,6 +42,7 @@ class LNSSolver:
         initial_routes: List[List[int]],
         time_limit: float = 10.0,
         max_iterations: int = 1000,
+        allowed_removal_nodes: Optional[Set[int]] = None,
     ) -> Tuple[List[List[int]], float, int]:
         """
         Run LNS on instance starting from initial_routes.
@@ -77,11 +78,11 @@ class LNSSolver:
             # Choose destroy operator: 0 = Shaw, 1 = Worst, 2 = Random
             dest_choice = self.rng.choice([0, 1, 2], p=[0.5, 0.3, 0.2])
             if dest_choice == 0:
-                removed_nodes, remaining_routes = self._shaw_removal(current_routes, instance, q)
+                removed_nodes, remaining_routes = self._shaw_removal(current_routes, instance, q, allowed_removal_nodes)
             elif dest_choice == 1:
-                removed_nodes, remaining_routes = self._worst_removal(current_routes, instance, q)
+                removed_nodes, remaining_routes = self._worst_removal(current_routes, instance, q, allowed_removal_nodes)
             else:
-                removed_nodes, remaining_routes = self._random_removal(current_routes, q)
+                removed_nodes, remaining_routes = self._random_removal(current_routes, q, allowed_removal_nodes)
 
             # Choose repair operator: 70% Regret-2, 30% Greedy
             if self.rng.rand() < 0.7:
@@ -107,11 +108,15 @@ class LNSSolver:
         return best_routes, best_cost, iteration
 
     def _random_removal(
-        self, routes: List[List[int]], q: int
+        self,
+        routes: List[List[int]],
+        q: int,
+        allowed_removal_nodes: Optional[Set[int]] = None,
     ) -> Tuple[List[int], List[List[int]]]:
-        all_nodes = [u for r in routes for u in r[1:-1]]
-        if len(all_nodes) <= q:
-            q = max(1, len(all_nodes) - 1)
+        all_nodes = [u for r in routes for u in r[1:-1] if allowed_removal_nodes is None or u in allowed_removal_nodes]
+        if not all_nodes:
+            return [], routes
+        q = min(q, len(all_nodes))
         removed = list(self.rng.choice(all_nodes, size=q, replace=False))
         rem_set = set(removed)
 
@@ -124,7 +129,11 @@ class LNSSolver:
         return removed, remaining_routes
 
     def _worst_removal(
-        self, routes: List[List[int]], instance: CVRPInstance, q: int
+        self,
+        routes: List[List[int]],
+        instance: CVRPInstance,
+        q: int,
+        allowed_removal_nodes: Optional[Set[int]] = None,
     ) -> Tuple[List[int], List[List[int]]]:
         dist = instance.dist_matrix
         savings: List[Tuple[float, int]] = []
@@ -132,13 +141,17 @@ class LNSSolver:
         for r in routes:
             for i in range(1, len(r) - 1):
                 u = r[i]
+                if allowed_removal_nodes is not None and u not in allowed_removal_nodes:
+                    continue
                 prev_n, next_n = r[i - 1], r[i + 1]
                 cost_gain = dist[prev_n, u] + dist[u, next_n] - dist[prev_n, next_n]
                 savings.append((cost_gain, u))
 
-        # Sort descending by cost savings when removed
+        if not savings:
+            return [], routes
+
+        q = min(q, len(savings))
         savings.sort(key=lambda x: x[0], reverse=True)
-        # Select with randomized bias
         p = 3.0
         removed: List[int] = []
         while len(removed) < q and savings:
@@ -154,18 +167,22 @@ class LNSSolver:
         return removed, remaining_routes
 
     def _shaw_removal(
-        self, routes: List[List[int]], instance: CVRPInstance, q: int
+        self,
+        routes: List[List[int]],
+        instance: CVRPInstance,
+        q: int,
+        allowed_removal_nodes: Optional[Set[int]] = None,
     ) -> Tuple[List[int], List[List[int]]]:
         dist = instance.dist_matrix
         demands = instance.demands
         max_dist = max(1.0, float(dist.max()))
         max_dem = max(1.0, float(demands.max()))
 
-        all_nodes = [u for r in routes for u in r[1:-1]]
+        all_nodes = [u for r in routes for u in r[1:-1] if allowed_removal_nodes is None or u in allowed_removal_nodes]
         if not all_nodes:
             return [], routes
 
-        # Pick random seed
+        q = min(q, len(all_nodes))
         seed_node = self.rng.choice(all_nodes)
         removed = [seed_node]
         rem_set = {seed_node}

@@ -141,11 +141,22 @@ class L2SegIterativeSolver:
             step_time = min(reopt_time_per_iter, time_left)
 
             # 4. Re-optimization with Backbone Solver on Reduced Problem (FSTA Macro-Block Search)
-            improved_agg_routes = fsta_macro_local_search(agg_problem, max_passes=10)
+            improved_agg_routes = fsta_macro_local_search(agg_problem, max_passes=5)
 
             # 5. Solution Recovery (Feasibility & Monotonicity Guaranteed)
             recovered_routes = recover_solution(agg_problem, improved_agg_routes)
             rec_cost = self.compute_cost(instance, recovered_routes)
+
+            # 5b. Focused LNS Re-optimization on Unstable Neighborhoods
+            if self.backbone_name == "lns":
+                unstable_nodes = {u for u, v in unstable_edges if u != 0} | {v for u, v in unstable_edges if v != 0}
+                if unstable_nodes:
+                    lns_routes, lns_cost, _ = self.lns.solve(
+                        instance, recovered_routes, time_limit=step_time, allowed_removal_nodes=unstable_nodes
+                    )
+                    if lns_cost < rec_cost:
+                        recovered_routes = lns_routes
+                        rec_cost = lns_cost
 
             # 6. Monotonic update
             if rec_cost < current_cost - 1e-6:

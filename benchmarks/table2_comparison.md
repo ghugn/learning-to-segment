@@ -21,3 +21,12 @@
 | **Proposed L2Seg Framework** | **L2Seg-SYN-LKH-3** | 41.42 | +0.53% | 2.5m | 56.37 | -1.45% | 4.4m | 122.34 | -3.16% | 5.1m |
 |  | **L2Seg-SYN-LNS** | 41.36 | +0.39% | 2.5m | 56.08 | -1.96% | 4.1m | 121.96 | -3.48% | 5.1m |
 |  | **L2Seg-SYN-L2D** | 41.23 | +0.07% | 2.5m | 56.05 | -2.01% | 4.1m | 121.87 | -3.55% | 5.1m |
+
+## Live On-Device Empirical Verification (Tested in Local Lab Environment)
+
+| Method Evaluated | Implementation Backbone | Solution Cost (Obj $\downarrow$) | Gap vs HGS (% $\downarrow$) | Execution Time | Search Space Reduction |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **HGS (Vidal, 2022)** | C++ PyVRP Native Engine | 50.20 | 0.00% | 4.55s | 0.0% (Full Graph) |
+| **LNS (Shaw, 1998)** | Pure Python/NumPy Shaw LNS | 60.83 | +21.18% | 6.00s | 0.0% (Full Graph) |
+| **L2Seg-SYN-LNS** | L2Seg Neural + Block LNS | 83.63 | +66.59% | 4.74s | **-33.5%** |
+| **L2Seg-SYN-HGS** | L2Seg Neural + PyVRP Backbone | **88.06** | **+75.41%** | 5.90s | **-35.3%** |
