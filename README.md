@@ -10,6 +10,8 @@ An industrial-grade, fully modular Python implementation of **Learning to Segmen
 
 This module serves as the **Level 2: Topological Coarse-Graining / Abstraction** component in the overarching research framework **Bridging Reducibility and Scalability: Toward Foundation Multi-task Combinatorial Optimization**.
 
+> 📖 **Comprehensive Project & Benchmark Log**: For the complete chronological development trajectory, AI training details, 9 core technical findings, and full empirical benchmark tables against PyVRP, NDS, and LKH-3, please refer to **[README_Progress.md](README_Progress.md)**.
+
 ---
 
 ## Key Highlights & Architectural Features
