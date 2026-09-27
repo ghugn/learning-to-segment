@@ -291,9 +291,11 @@ def run_live_head_to_head_comparison(
 def format_table2_markdown(live_results: Optional[Dict[str, Any]] = None) -> str:
     """Format complete Markdown table directly matching Table 2 of ICLR 2026 paper."""
     md = []
-    md.append("# Table 2: Performance comparisons of L2Seg-SYN against Baselines on Benchmark CVRP Instances")
-    md.append("\n*The gap % (lower the better) is with respect to the performance of HGS (Vidal, 2022).*\n")
+    md.append("# Table 2: Performance comparisons of our L2Seg-SYN-L2D against baselines on benchmark CVRP and VRPTW instances")
+    md.append("\n*The gap % (lower the better) is w.r.t. the performance of HGS.*\n")
     
+    # 1. CVRP Section
+    md.append("### Part A: Capacitated Vehicle Routing Problem (CVRP)\n")
     md.append("| Category | Methods | CVRP1k Obj | CVRP1k Gap% | CVRP1k Time | CVRP2k Obj | CVRP2k Gap% | CVRP2k Time | CVRP5k Obj | CVRP5k Gap% | CVRP5k Time |")
     md.append("| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |")
 
@@ -320,8 +322,31 @@ def format_table2_markdown(live_results: Optional[Dict[str, Any]] = None) -> str
 
         md.append(f"| {cat_str} | {m} | {o1} | {g1} | {t1} | {o2} | {g2} | {t2} | {o5} | {g5} | {t5} |")
 
+    # 2. VRPTW Section
+    md.append("\n### Part B: Vehicle Routing Problem with Time Windows (VRPTW)\n")
+    md.append("| Methods | VRPTW1k Obj | VRPTW1k Gap% | VRPTW1k Time | VRPTW2k Obj | VRPTW2k Gap% | VRPTW2k Time | VRPTW5k Obj | VRPTW5k Gap% | VRPTW5k Time |")
+    md.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |")
+
+    for row in TABLE2_OFFICIAL_LITERATURE["vrptw"]:
+        m = row["method"]
+        if "L2Seg" in m:
+            m = f"**{m}**"
+        o1 = f"{row['1k']['obj']:.2f}" if row['1k']['obj'] else "-"
+        g1 = f"{row['1k']['gap']}"
+        t1 = f"{row['1k']['time']}"
+
+        o2 = f"{row['2k']['obj']:.2f}" if row['2k']['obj'] else "-"
+        g2 = f"{row['2k']['gap']}"
+        t2 = f"{row['2k']['time']}"
+
+        o5 = f"{row['5k']['obj']:.2f}" if row['5k']['obj'] else "-"
+        g5 = f"{row['5k']['gap']}"
+        t5 = f"{row['5k']['time']}"
+
+        md.append(f"| {m} | {o1} | {g1} | {t1} | {o2} | {g2} | {t2} | {o5} | {g5} | {t5} |")
+
     if live_results:
-        md.append("\n## Live On-Device Empirical Verification (Tested in Local Lab Environment)\n")
+        md.append("\n### Part C: Live On-Device Empirical Verification (Tested in Local Lab Environment)\n")
         md.append("| Method Evaluated | Implementation Backbone | Solution Cost (Obj $\\downarrow$) | Gap vs HGS (% $\\downarrow$) | Execution Time | Search Space Reduction |")
         md.append("| :--- | :--- | :---: | :---: | :---: | :---: |")
         
@@ -346,7 +371,7 @@ def format_table2_markdown(live_results: Optional[Dict[str, Any]] = None) -> str
 def print_table2_cli(live_results: Optional[Dict[str, Any]] = None):
     """Print clean terminal view of Table 2."""
     print("\n" + "=" * 115)
-    print("      TABLE 2: SOTA BENCHMARK COMPARISON: L2Seg-SYN vs BASELINES (ICLR 2026)")
+    print("      TABLE 2 (PART A: CVRP): L2Seg-SYN vs BASELINES (ICLR 2026)")
     print("=" * 115)
     header = f"{'Methods':<28} | {'CVRP1k Obj':<10} | {'Gap%':<8} | {'CVRP2k Obj':<10} | {'Gap%':<8} | {'CVRP5k Obj':<10} | {'Gap%':<8}"
     print(header)
@@ -365,6 +390,27 @@ def print_table2_cli(live_results: Optional[Dict[str, Any]] = None):
             print(f">>> {m:<24} | {o1:<10} | {g1:<8} | {o2:<10} | {g2:<8} | {o5:<10} | {g5:<8} <<<")
         else:
             print(f"    {m:<24} | {o1:<10} | {g1:<8} | {o2:<10} | {g2:<8} | {o5:<10} | {g5:<8}")
+
+    print("\n" + "=" * 115)
+    print("      TABLE 2 (PART B: VRPTW): L2Seg-SYN vs BASELINES (ICLR 2026)")
+    print("=" * 115)
+    header_tw = f"{'Methods':<28} | {'VRPTW1k Obj':<11} | {'Gap%':<8} | {'VRPTW2k Obj':<11} | {'Gap%':<8} | {'VRPTW5k Obj':<11} | {'Gap%':<8}"
+    print(header_tw)
+    print("-" * 115)
+
+    for row in TABLE2_OFFICIAL_LITERATURE["vrptw"]:
+        m = row["method"]
+        o1 = f"{row['1k']['obj']:.2f}" if row['1k']['obj'] else "-"
+        g1 = f"{row['1k']['gap']}"
+        o2 = f"{row['2k']['obj']:.2f}" if row['2k']['obj'] else "-"
+        g2 = f"{row['2k']['gap']}"
+        o5 = f"{row['5k']['obj']:.2f}" if row['5k']['obj'] else "-"
+        g5 = f"{row['5k']['gap']}"
+
+        if "L2Seg" in m:
+            print(f">>> {m:<24} | {o1:<11} | {g1:<8} | {o2:<11} | {g2:<8} | {o5:<11} | {g5:<8} <<<")
+        else:
+            print(f"    {m:<24} | {o1:<11} | {g1:<8} | {o2:<11} | {g2:<8} | {o5:<11} | {g5:<8}")
 
     print("=" * 115)
 

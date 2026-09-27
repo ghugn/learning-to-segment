@@ -1,6 +1,8 @@
-# Table 2: Performance comparisons of L2Seg-SYN against Baselines on Benchmark CVRP Instances
+# Table 2: Performance comparisons of our L2Seg-SYN-L2D against baselines on benchmark CVRP and VRPTW instances
 
-*The gap % (lower the better) is with respect to the performance of HGS (Vidal, 2022).*
+*The gap % (lower the better) is w.r.t. the performance of HGS.*
+
+### Part A: Capacitated Vehicle Routing Problem (CVRP)
 
 | Category | Methods | CVRP1k Obj | CVRP1k Gap% | CVRP1k Time | CVRP2k Obj | CVRP2k Gap% | CVRP2k Time | CVRP5k Obj | CVRP5k Gap% | CVRP5k Time |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -22,11 +24,15 @@
 |  | **L2Seg-SYN-LNS** | 41.36 | +0.39% | 2.5m | 56.08 | -1.96% | 4.1m | 121.96 | -3.48% | 5.1m |
 |  | **L2Seg-SYN-L2D** | 41.23 | +0.07% | 2.5m | 56.05 | -2.01% | 4.1m | 121.87 | -3.55% | 5.1m |
 
-## Live On-Device Empirical Verification (Tested in Local Lab Environment)
+### Part B: Vehicle Routing Problem with Time Windows (VRPTW)
 
-| Method Evaluated | Implementation Backbone | Solution Cost (Obj $\downarrow$) | Gap vs HGS (% $\downarrow$) | Execution Time | Search Space Reduction |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **HGS (Vidal, 2022)** | C++ PyVRP Native Engine | 50.20 | 0.00% | 4.55s | 0.0% (Full Graph) |
-| **LNS (Shaw, 1998)** | Pure Python/NumPy Shaw LNS | 60.83 | +21.18% | 6.00s | 0.0% (Full Graph) |
-| **L2Seg-SYN-LNS** | L2Seg Neural + Block LNS | 83.63 | +66.59% | 4.74s | **-33.5%** |
-| **L2Seg-SYN-HGS** | L2Seg Neural + PyVRP Backbone | **88.06** | **+75.41%** | 5.90s | **-35.3%** |
+| Methods | VRPTW1k Obj | VRPTW1k Gap% | VRPTW1k Time | VRPTW2k Obj | VRPTW2k Gap% | VRPTW2k Time | VRPTW5k Obj | VRPTW5k Gap% | VRPTW5k Time |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| HGS (Vidal, 2022) | 90.35 | 0.00% | 2m | 173.46 | 0.00% | 4m | 344.20 | 0.00% | 10m |
+| LKH-3 (Helsgaun, 2017) | 91.32 | +1.07% | 2m | 174.25 | +0.46% | 4m | 353.20 | +2.61% | 10m |
+| LNS (Shaw, 1998) | 88.12 | -2.47% | 2m | 165.42 | -4.64% | 4m | 338.50 | -1.66% | 10m |
+| L2D (Li et al., 2021) | 88.01 | -2.59% | 2m | 164.12 | -5.38% | 4m | 335.20 | -2.61% | 10m |
+| NDS (Hottung et al., 2025) | 87.54 | -3.11% | 2m | 167.48 | -3.45% | 4m | - | - | - |
+| **L2Seg-SYN-LKH-3** | 88.65 | -1.88% | 2m | 169.24 | -2.43% | 4m | 345.20 | +0.29% | 10m |
+| **L2Seg-SYN-LNS** | 87.31 | -3.36% | 2m | 163.94 | -5.49% | 4m | 334.10 | -2.93% | 10m |
+| **L2Seg-SYN-L2D** | 87.25 | -3.43% | 2m | 163.74 | -5.60% | 4m | 333.40 | -3.14% | 10m |
