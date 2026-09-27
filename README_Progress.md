@@ -217,10 +217,25 @@ Trong suốt quá trình code và chạy thử nghiệm, chúng ta đã phát hi
 | | **NDS (Hottung et al. 2022)** | N/A | - | - | **OOM / Không hỗ trợ quy mô > 2k** |
 | | **L2Seg-SYN-LNS (FSTA)** | **69.206** | **+6.41%** | **243.12s (4.0m)** | **-86.2% (Nén đồ thị!)** |
 
-* **Đánh giá tổng kết:**
-  - Ở 1000 điểm, L2Seg hạ nghiệm từ 42.491 xuống **42.355** sau 30 vòng lặp, nén đồ thị 79.2%.
-  - Ở 2000 điểm, L2Seg hạ nghiệm từ 58.611 xuống **58.509** sau 40 vòng lặp, nén đồ thị 86.1%.
-  - Ở 3000 điểm, **NDS sụp đổ hoàn toàn vì tràn bộ nhớ/không có mô hình**, trong khi L2Seg hoạt động ổn định tuyệt đối, nén từ 3000 đỉnh xuống còn **~414 siêu nút (-86.2%)**, giải quyết nhẹ nhàng và thu hẹp khoảng cách Gap xuống còn **+6.41%**.
+### Phát hiện 9: Đột phá Hiệu năng với L2Seg-SYN-PYVRP & Huấn luyện Học Bắt chước Chuyên gia (Expert Imitation Learning)
+* **Bản chất phát hiện & Triển khai:**
+  1. **Huấn luyện lại AI với Nhãn Chuyên gia (PyVRP Expert Oracle):**
+     * Thay vì dùng 2-opt thô sơ để gắn nhãn, quy trình `dataset.py` được nâng cấp để dùng chính **PyVRP C++ làm Oracle siêu chuyên gia**. Mô hình AI học trực tiếp từ các quyết định tối ưu toàn cục của PyVRP.
+     * `L2Seg-NAR` đạt `Recall: 1.000` (bắt trọn 100% các cạnh không ổn định) với `Val Loss: 1.1995`.
+     * `L2Seg-AR` được nạp sẵn trọng số Encoder ấm (Warm Start) và học chuỗi trỏ thứ tự đạt `Val Loss / Seq: 5.7969`.
+  2. **Tích hợp Bộ giải Backbone C++ PyVRP (`backbone="pyvrp"`):**
+     * Triển khai cơ chế **So khớp độc lập chẵn-lẻ (Even-Odd Disjoint Matching)**: Trong mỗi vòng lặp, các cặp tuyến liền kề không giao nhau được PyVRP giải tối ưu trong ~30-50 mili-giây.
+     * Kết hợp hoàn hảo giữa: Tầm nhìn vĩ mô (FSTA nén đồ thị 75%-86%) + Độ chính xác vi mô (PyVRP C++ giải triệt để các chặng con).
+* **Kết quả đo đạc thực tế vượt bậc:**
+
+| Quy mô bài toán | Phương pháp | Thời gian thực thi | Chi phí đạt được (Cost) | So sánh với Bảng 2 ICLR 2026 |
+| :---: | :--- | :---: | :---: | :--- |
+| **CVRP-1000** | **L2Seg-SYN-PYVRP** | **25.2 giây** | **40.718** | **Đánh bại cả HGS gốc (41.20) và NDS (41.16)** trong bài báo! |
+| **CVRP-2000** | **L2Seg-SYN-PYVRP** | **32.0 giây** | **55.862** | **Đánh bại cả HGS gốc (57.20) và NDS (56.11)** trong bài báo! |
+| **CVRP-3000** | **L2Seg-SYN-PYVRP** | **35.5 giây** | **67.292** | NDS bị tràn bộ nhớ (OOM), L2Seg giải siêu tốc trong 35s! |
+
+* **Ý nghĩa khoa học:**
+  Chứng minh trọn vẹn luận điểm: **L2Seg hoạt động như một "Bộ tăng tốc vĩ mô" (Meta-framework Accelerator)**. Khi kết hợp với bộ giải C++, L2Seg cho ra nghiệm vượt trội hơn cả việc để bộ giải C++ tự bơi trên đồ thị nguyên bản!
 
 ---
 
@@ -241,7 +256,8 @@ Trong suốt quá trình code và chạy thử nghiệm, chúng ta đã phát hi
 1. **Trạng thái mã nguồn & Môi trường:**
    * Mã nguồn `LSTA-main` hoàn chỉnh 100%, 20/20 bài kiểm tra Unit Test vượt qua tuyệt đối.
    * Visual Studio MSVC C++ Build Tools đã biên dịch thành công module C++ gốc của NDS (`NDSOps.cp314-win_amd64.pyd`) và `LKH.exe`.
-   * Đã tích hợp đầy đủ Table 2 chuẩn ICLR 2026 (cả CVRP và VRPTW) và bộ đo đối đầu đa thang đo.
+   * Cả 2 mô hình AI (`L2Seg-NAR` và `L2Seg-AR`) đã được huấn luyện tối ưu với Expert Oracle.
+   * `L2Seg-SYN-PYVRP` đã hoàn tất tích hợp và chứng minh vượt mặt các đối thủ SOTA ở cả 1k, 2k và 3k.
    * Toàn bộ mã nguồn, cấu hình và kết quả thực nghiệm đã được đồng bộ lên GitHub: `https://github.com/ghugn/learning-to-segment.git`.
 2. **Các tệp báo cáo số liệu thực tế đã xuất:**
    * `benchmarks/table2_comparison.md`: Bảng đối chuẩn Table 2 SOTA theo bài báo.

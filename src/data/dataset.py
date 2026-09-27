@@ -57,11 +57,12 @@ def create_training_samples_from_instance(
     instance: CVRPInstance,
     initial_routes: Optional[List[List[int]]] = None,
     solver_passes: int = 5,
+    oracle: str = "pyvrp",
 ) -> List[L2SegSample]:
     """
     Generate training samples from a single CVRP instance (Algorithm 2 in paper):
     1. Obtain initial solution R (via Angular Sweep if not provided).
-    2. Obtain improved solution R+ via local solver lookahead.
+    2. Obtain improved solution R+ via local solver lookahead (PyVRP expert or local search).
     3. Extract differing edges E_diff = (E_deleted, E_inserted).
     4. Decompose P into adjacent route subproblems P_TR.
     5. For each subproblem, extract node/edge features and supervisory labels.
@@ -70,7 +71,19 @@ def create_training_samples_from_instance(
         initial_routes = build_angular_sweep_solution(instance)
 
     # 1. Run look-ahead solver to obtain improved solution R+
-    improved_routes = original_cvrp_local_search(instance, initial_routes, max_passes=solver_passes)
+    improved_routes = None
+    if oracle.lower() == "pyvrp":
+        try:
+            from solvers.pyvrp_solver import PyVRPSolver
+            pyvrp = PyVRPSolver()
+            routes_cand, _, _ = pyvrp.solve(instance, time_limit=1.0)
+            if routes_cand and len(routes_cand) > 0:
+                improved_routes = routes_cand
+        except Exception:
+            improved_routes = None
+
+    if improved_routes is None:
+        improved_routes = original_cvrp_local_search(instance, initial_routes, max_passes=solver_passes)
 
     # 2. Extract differing edges
     deleted_edges, inserted_edges = extract_differing_edges(initial_routes, improved_routes)

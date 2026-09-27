@@ -101,6 +101,7 @@ def main():
     parser.add_argument("--time_1k", type=float, default=150.0, help="Time limit for CVRP 1k (default: 150s / 2.5m)")
     parser.add_argument("--time_2k", type=float, default=240.0, help="Time limit for CVRP 2k (default: 240s / 4.0m)")
     parser.add_argument("--time_3k", type=float, default=240.0, help="Time limit for CVRP 3k (default: 240s / 4.0m)")
+    parser.add_argument("--backbone", type=str, default="pyvrp", choices=["pyvrp", "lns"], help="Backbone re-optimizer (default: pyvrp)")
     parser.add_argument("--nds_dir", type=str, default="../NDS", help="Path to NDS cloned repository")
     args = parser.parse_args()
 
@@ -118,7 +119,7 @@ def main():
     chk_ar = os.path.join(project_root, "checkpoints", "ar_model.pt")
     model = L2SegModel.load_pretrained(chk_nar, chk_ar)
 
-    l2seg_solver = L2SegIterativeSolver(model=model, backbone="lns")
+    l2seg_solver = L2SegIterativeSolver(model=model, backbone=args.backbone)
 
     scales = [1000, 2000, 3000]
     all_scale_results = []

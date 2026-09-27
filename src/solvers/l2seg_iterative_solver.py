@@ -152,8 +152,29 @@ class L2SegIterativeSolver:
             recovered_routes = recover_solution(agg_problem, improved_agg_routes)
             rec_cost = self.compute_cost(instance, recovered_routes)
 
-            # 5b. Focused LNS Re-optimization on Unstable Neighborhoods
-            if self.backbone_name == "lns":
+            # 5b. Focused Re-optimization on Unstable Neighborhoods
+            if self.backbone_name == "pyvrp":
+                # Decompose into adjacent route subproblems
+                subs = decompose_into_adjacent_subproblems(instance, recovered_routes)
+                if len(subs) > 0:
+                    start_idx = iteration % 2
+                    selected_subs = [subs[i] for i in range(start_idx, len(subs) - 1, 2)]
+                    sub_budget = max(0.02, min(0.1, step_time / max(1, len(selected_subs))))
+                    for sub in selected_subs:
+                        sub_inst = CVRPInstance(coords=sub.coords, demands=sub.demands, capacity=sub.capacity)
+                        new_local_routes, new_sub_cost, _ = self.pyvrp.solve(sub_inst, time_limit=sub_budget)
+                        old_sub_cost = sum(
+                            sum(instance.dist_matrix[r[k], r[k + 1]] for k in range(len(r) - 1))
+                            for r in sub.orig_routes
+                        )
+                        if new_sub_cost < old_sub_cost - 1e-4:
+                            new_orig_routes = [[sub.local_to_orig[u] for u in r] for r in new_local_routes]
+                            recovered_routes[sub.route_i_idx] = new_orig_routes[0]
+                            if len(new_orig_routes) > 1:
+                                recovered_routes[sub.route_j_idx] = new_orig_routes[1]
+                    rec_cost = self.compute_cost(instance, recovered_routes)
+
+            elif self.backbone_name == "lns":
                 unstable_nodes = {u for u, v in unstable_edges if u != 0} | {v for u, v in unstable_edges if v != 0}
                 if unstable_nodes:
                     lns_routes, lns_cost, _ = self.lns.solve(
